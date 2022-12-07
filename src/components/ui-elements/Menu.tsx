@@ -18,6 +18,7 @@ import Home from "../pages/Home";
 import MenuItem from "./MenuItem";
 import CommentIcon from "@mui/icons-material/Comment";
 import DialogEditor from "../pages/dialog-editor/DialogEditor";
+import { ReactFlowProvider } from "reactflow";
 
 interface MenuItemProps {
   display: string;
@@ -120,7 +121,11 @@ export default function Menu() {
       display: "DialogEditor",
       link: "/dialogEditor",
       icon: <CommentIcon />,
-      element: <DialogEditor />,
+      element: (
+        <ReactFlowProvider>
+          <DialogEditor />
+        </ReactFlowProvider>
+      ),
     },
     //TODO add new Links here
   ];

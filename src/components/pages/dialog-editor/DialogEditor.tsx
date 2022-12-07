@@ -1,7 +1,7 @@
 import { Button, Container } from "@mui/material";
 import { v4 as uuidv4 } from "uuid";
 import _ from "lodash";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import ReactFlow, {
   Node,
   addEdge,
@@ -14,6 +14,10 @@ import ReactFlow, {
   EdgeChange,
   NodeRemoveChange,
   NodeAddChange,
+  useNodesState,
+  useEdgesState,
+  ReactFlowInstance,
+  useReactFlow,
 } from "reactflow";
 import CustomNode from "./CustomNode";
 
@@ -46,19 +50,28 @@ const nodeTypes = {
 };
 
 function DialogEditor() {
-  const [nodes, setNodes] = useState(initialNodes);
-  const [edges, setEdges] = useState(initialEdges);
+  const reactFlowInstance = useReactFlow();
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  const onNodesChange = useCallback(
-    (changes: NodeChange[]) =>
-      setNodes((nds) => applyNodeChanges(changes, nds)),
-    []
-  );
-  const onEdgesChange = useCallback(
-    (changes: EdgeChange[]) =>
-      setEdges((eds) => applyEdgeChanges(changes, eds)),
-    []
-  );
+  useEffect(() => {
+    console.log("edges", edges);
+  }, [edges]);
+
+  useEffect(() => {
+    console.log("nodes", nodes);
+  }, [nodes]);
+
+  // const onNodesChange = useCallback(
+  //   (changes: NodeChange[]) =>
+  //     setNodes((nds) => applyNodeChanges(changes, nds)),
+  //   []
+  // );
+  // const onEdgesChange = useCallback(
+  //   (changes: EdgeChange[]) =>
+  //     setEdges((eds) => applyEdgeChanges(changes, eds)),
+  //   []
+  // );
 
   const onConnect = useCallback(
     (params: Edge | Connection) => setEdges((els) => addEdge(params, els)),
@@ -79,11 +92,15 @@ function DialogEditor() {
       },
       position: { x: 100, y: 100 },
     };
-    onNodesChange([{ item: newState, type: "add" } as NodeAddChange]);
+    reactFlowInstance.addNodes([newState]);
   }
 
   function removeState(id: string) {
-    onNodesChange([{ id: id, type: "remove" } as NodeRemoveChange]);
+    let node: Node = reactFlowInstance.getNode(id)!;
+    let temp = {
+      nodes: [node],
+    };
+    reactFlowInstance.deleteElements(temp);
   }
 
   function editState(id: string) {
@@ -92,7 +109,9 @@ function DialogEditor() {
 
   return (
     <Container>
-      <Button onClick={addState}>Add State</Button>
+      <Button variant="contained" onClick={addState}>
+        Add State
+      </Button>
       <div style={{ height: "80vh", border: "1px solid blue" }}>
         <ReactFlow
           nodes={nodes}

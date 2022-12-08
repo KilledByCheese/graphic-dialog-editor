@@ -1,6 +1,5 @@
 import { Button, Container } from "@mui/material";
 import { v4 as uuidv4 } from "uuid";
-import _ from "lodash";
 import { useCallback, useEffect, useState } from "react";
 import ReactFlow, {
   Node,
@@ -8,20 +7,19 @@ import ReactFlow, {
   Background,
   Edge,
   Connection,
-  applyNodeChanges,
-  applyEdgeChanges,
-  NodeChange,
-  EdgeChange,
-  NodeRemoveChange,
-  NodeAddChange,
   useNodesState,
   useEdgesState,
-  ReactFlowInstance,
   useReactFlow,
+  MarkerType,
+  updateEdge,
+  EdgeProps,
+  applyEdgeChanges,
 } from "reactflow";
 import CustomNode from "./CustomNode";
-
+import _ from "lodash";
 import "reactflow/dist/style.css";
+import CustomEdge from "./CustomEdge";
+import SimpleTextModal from "../../ui-elements/SimpleTextModal";
 
 const initialNodes: Node[] = [
   /*{
@@ -49,6 +47,15 @@ const nodeTypes = {
   custom: CustomNode,
 };
 
+const edgeTypes = {
+  custom: CustomEdge,
+};
+
+const connectionLineStyle = {
+  strokeWidth: 3,
+  stroke: "black",
+};
+
 function DialogEditor() {
   const reactFlowInstance = useReactFlow();
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -74,9 +81,43 @@ function DialogEditor() {
   // );
 
   const onConnect = useCallback(
-    (params: Edge | Connection) => setEdges((els) => addEdge(params, els)),
+    (params: Edge | Connection) => {
+      let newId = uuidv4();
+      setEdges((els) =>
+        addEdge(
+          {
+            ...params,
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              width: 20,
+              height: 20,
+              color: "#0000FF",
+            },
+            style: {
+              strokeWidth: 2,
+              stroke: "#0000FF",
+            },
+            id: newId,
+            type: "custom",
+            data: {
+              text: "yoot",
+              functions: {
+                addText: addTextToEdge,
+              },
+            },
+          },
+          els
+        )
+      );
+    },
     [setEdges]
   );
+
+  function addTextToEdge(event: React.MouseEvent<any>, id: string) {
+    event.stopPropagation();
+    setEditId(id);
+    setOpen(true);
+  }
 
   function addState() {
     let newId = uuidv4();
@@ -95,6 +136,7 @@ function DialogEditor() {
     reactFlowInstance.addNodes([newState]);
   }
 
+  const [editId, setEditId] = useState("");
   function removeState(id: string) {
     let node: Node = reactFlowInstance.getNode(id)!;
     let temp = {
@@ -103,9 +145,45 @@ function DialogEditor() {
     reactFlowInstance.deleteElements(temp);
   }
 
+  function submitFunction(data: any) {
+    let newId = uuidv4();
+    let target = reactFlowInstance.getEdge(editId)!.target;
+    let source = reactFlowInstance.getEdge(editId)!.source;
+    reactFlowInstance.deleteElements({
+      edges: [reactFlowInstance.getEdge(editId)!],
+    });
+    let temp: Edge = {
+      source: source,
+      target: target,
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        width: 20,
+        height: 20,
+        color: "#0000FF",
+      },
+      style: {
+        strokeWidth: 2,
+        stroke: "#0000FF",
+      },
+      id: newId,
+      type: "custom",
+      data: {
+        text: data.text,
+        functions: {
+          addText: addTextToEdge,
+        },
+      },
+    };
+
+    reactFlowInstance.addEdges(temp);
+    setOpen(false);
+  }
+
   function editState(id: string) {
     console.log("edit ", id);
   }
+
+  const [open, setOpen] = useState(false);
 
   return (
     <Container>
@@ -120,10 +198,21 @@ function DialogEditor() {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           nodeTypes={nodeTypes}
+          connectionLineStyle={connectionLineStyle}
+          edgeTypes={edgeTypes}
         >
           <Background />
         </ReactFlow>
       </div>
+      <SimpleTextModal
+        show={open}
+        handleClose={() => {
+          setOpen(false);
+          setEditId("");
+        }}
+        title="Enter a Text"
+        submitFunction={submitFunction}
+      />
     </Container>
   );
 }

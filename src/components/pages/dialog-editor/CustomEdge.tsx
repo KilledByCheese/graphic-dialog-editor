@@ -1,10 +1,5 @@
 import React from "react";
-import {
-  EdgeProps,
-  EdgeText,
-  getBezierPath,
-  getSmoothStepPath,
-} from "reactflow";
+import { EdgeProps, EdgeText, getSmoothStepPath } from "reactflow";
 
 export default function CustomEdge({
   id,

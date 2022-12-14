@@ -100,7 +100,7 @@ function DialogEditor() {
             id: newId,
             type: "custom",
             data: {
-              text: "yoot",
+              text: "",
               functions: {
                 addText: addTextToEdge,
               },
@@ -115,8 +115,8 @@ function DialogEditor() {
 
   function addTextToEdge(event: React.MouseEvent<any>, id: string) {
     event.stopPropagation();
-    setEditId(id);
-    setOpen(true);
+    setEditEdge(id);
+    setOpenEditEdge(true);
   }
 
   function addState() {
@@ -136,7 +136,7 @@ function DialogEditor() {
     reactFlowInstance.addNodes([newState]);
   }
 
-  const [editId, setEditId] = useState("");
+  const [editEdge, setEditEdge] = useState("");
   function removeState(id: string) {
     let node: Node = reactFlowInstance.getNode(id)!;
     let temp = {
@@ -145,12 +145,32 @@ function DialogEditor() {
     reactFlowInstance.deleteElements(temp);
   }
 
-  function submitFunction(data: any) {
+  function submitNodeFunction(data: any) {
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === editNode) {
+          // it's important that you create a new object here
+          // in order to notify react flow about the change
+          node.data = {
+            ...node.data,
+            label: data.text,
+          };
+        }
+
+        return node;
+      })
+    );
+
+    setEditNode("");
+    setOpenEditNode(false);
+  }
+
+  function submitEdgeTextFunction(data: any) {
     let newId = uuidv4();
-    let target = reactFlowInstance.getEdge(editId)!.target;
-    let source = reactFlowInstance.getEdge(editId)!.source;
+    let target = reactFlowInstance.getEdge(editEdge)!.target;
+    let source = reactFlowInstance.getEdge(editEdge)!.source;
     reactFlowInstance.deleteElements({
-      edges: [reactFlowInstance.getEdge(editId)!],
+      edges: [reactFlowInstance.getEdge(editEdge)!],
     });
     let temp: Edge = {
       source: source,
@@ -176,14 +196,18 @@ function DialogEditor() {
     };
 
     reactFlowInstance.addEdges(temp);
-    setOpen(false);
+    setEditEdge("");
+    setOpenEditEdge(false);
   }
 
+  const [editNode, setEditNode] = useState("");
   function editState(id: string) {
-    console.log("edit ", id);
+    setEditNode(id);
+    setOpenEditNode(true);
   }
 
-  const [open, setOpen] = useState(false);
+  const [openEditEdge, setOpenEditEdge] = useState(false);
+  const [openEditNode, setOpenEditNode] = useState(false);
 
   return (
     <Container>
@@ -205,13 +229,22 @@ function DialogEditor() {
         </ReactFlow>
       </div>
       <SimpleTextModal
-        show={open}
+        show={openEditEdge}
         handleClose={() => {
-          setOpen(false);
-          setEditId("");
+          setOpenEditEdge(false);
+          setEditEdge("");
         }}
-        title="Enter a Text"
-        submitFunction={submitFunction}
+        title="Enter a Edge Text"
+        submitFunction={submitEdgeTextFunction}
+      />
+      <SimpleTextModal
+        show={openEditNode}
+        handleClose={() => {
+          setOpenEditNode(false);
+          setEditNode("");
+        }}
+        title="Enter a Edge Text"
+        submitFunction={submitNodeFunction}
       />
     </Container>
   );

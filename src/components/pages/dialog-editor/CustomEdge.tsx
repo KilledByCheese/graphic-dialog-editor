@@ -1,5 +1,10 @@
 import React from "react";
-import { EdgeProps, EdgeText, getBezierPath } from "reactflow";
+import {
+  EdgeProps,
+  EdgeText,
+  getBezierPath,
+  getSmoothStepPath,
+} from "reactflow";
 
 export default function CustomEdge({
   id,
@@ -13,7 +18,7 @@ export default function CustomEdge({
   markerEnd,
   data,
 }: EdgeProps) {
-  const [edgePath, labelX, labelY] = getBezierPath({
+  const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
     sourceY,
     sourcePosition,

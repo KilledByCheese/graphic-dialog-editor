@@ -1,23 +1,25 @@
 import { Button, Container } from "@mui/material";
 import { v4 as uuidv4 } from "uuid";
-import _ from "lodash";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import ReactFlow, {
   Node,
   addEdge,
   Background,
   Edge,
   Connection,
-  applyNodeChanges,
+  useNodesState,
+  useEdgesState,
+  useReactFlow,
+  MarkerType,
+  updateEdge,
+  EdgeProps,
   applyEdgeChanges,
-  NodeChange,
-  EdgeChange,
-  NodeRemoveChange,
-  NodeAddChange,
 } from "reactflow";
 import CustomNode from "./CustomNode";
-
+import _ from "lodash";
 import "reactflow/dist/style.css";
+import CustomEdge from "./CustomEdge";
+import SimpleTextModal from "../../ui-elements/SimpleTextModal";
 
 const initialNodes: Node[] = [
   /*{
@@ -45,25 +47,77 @@ const nodeTypes = {
   custom: CustomNode,
 };
 
-function DialogEditor() {
-  const [nodes, setNodes] = useState(initialNodes);
-  const [edges, setEdges] = useState(initialEdges);
+const edgeTypes = {
+  custom: CustomEdge,
+};
 
-  const onNodesChange = useCallback(
-    (changes: NodeChange[]) =>
-      setNodes((nds) => applyNodeChanges(changes, nds)),
-    []
-  );
-  const onEdgesChange = useCallback(
-    (changes: EdgeChange[]) =>
-      setEdges((eds) => applyEdgeChanges(changes, eds)),
-    []
-  );
+const connectionLineStyle = {
+  strokeWidth: 3,
+  stroke: "black",
+};
+
+function DialogEditor() {
+  const reactFlowInstance = useReactFlow();
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  useEffect(() => {
+    console.log("edges", edges);
+  }, [edges]);
+
+  useEffect(() => {
+    console.log("nodes", nodes);
+  }, [nodes]);
+
+  // const onNodesChange = useCallback(
+  //   (changes: NodeChange[]) =>
+  //     setNodes((nds) => applyNodeChanges(changes, nds)),
+  //   []
+  // );
+  // const onEdgesChange = useCallback(
+  //   (changes: EdgeChange[]) =>
+  //     setEdges((eds) => applyEdgeChanges(changes, eds)),
+  //   []
+  // );
 
   const onConnect = useCallback(
-    (params: Edge | Connection) => setEdges((els) => addEdge(params, els)),
+    (params: Edge | Connection) => {
+      let newId = uuidv4();
+      setEdges((els) =>
+        addEdge(
+          {
+            ...params,
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              width: 20,
+              height: 20,
+              color: "#0000FF",
+            },
+            style: {
+              strokeWidth: 2,
+              stroke: "#0000FF",
+            },
+            id: newId,
+            type: "custom",
+            data: {
+              text: "",
+              functions: {
+                addText: addTextToEdge,
+              },
+            },
+          },
+          els
+        )
+      );
+    },
     [setEdges]
   );
+
+  function addTextToEdge(event: React.MouseEvent<any>, id: string) {
+    event.stopPropagation();
+    setEditEdge(id);
+    setOpenEditEdge(true);
+  }
 
   function addState() {
     let newId = uuidv4();
@@ -79,20 +133,87 @@ function DialogEditor() {
       },
       position: { x: 100, y: 100 },
     };
-    onNodesChange([{ item: newState, type: "add" } as NodeAddChange]);
+    reactFlowInstance.addNodes([newState]);
   }
 
+  const [editEdge, setEditEdge] = useState("");
   function removeState(id: string) {
-    onNodesChange([{ id: id, type: "remove" } as NodeRemoveChange]);
+    let node: Node = reactFlowInstance.getNode(id)!;
+    let temp = {
+      nodes: [node],
+    };
+    reactFlowInstance.deleteElements(temp);
   }
 
-  function editState(id: string) {
-    console.log("edit ", id);
+  function submitNodeFunction(data: any) {
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === editNode) {
+          // it's important that you create a new object here
+          // in order to notify react flow about the change
+          node.data = {
+            ...node.data,
+            label: data.text,
+          };
+        }
+
+        return node;
+      })
+    );
+
+    setEditNode("");
+    setOpenEditNode(false);
   }
+
+  function submitEdgeTextFunction(data: any) {
+    let newId = uuidv4();
+    let target = reactFlowInstance.getEdge(editEdge)!.target;
+    let source = reactFlowInstance.getEdge(editEdge)!.source;
+    reactFlowInstance.deleteElements({
+      edges: [reactFlowInstance.getEdge(editEdge)!],
+    });
+    let temp: Edge = {
+      source: source,
+      target: target,
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        width: 20,
+        height: 20,
+        color: "#0000FF",
+      },
+      style: {
+        strokeWidth: 2,
+        stroke: "#0000FF",
+      },
+      id: newId,
+      type: "custom",
+      data: {
+        text: data.text,
+        functions: {
+          addText: addTextToEdge,
+        },
+      },
+    };
+
+    reactFlowInstance.addEdges(temp);
+    setEditEdge("");
+    setOpenEditEdge(false);
+  }
+
+  const [editNode, setEditNode] = useState("");
+  function editState(id: string) {
+    setEditNode(id);
+    setOpenEditNode(true);
+  }
+
+  const [openEditEdge, setOpenEditEdge] = useState(false);
+  const [openEditNode, setOpenEditNode] = useState(false);
 
   return (
     <Container>
-      <Button onClick={addState}>Add State</Button>
+      <Button variant="contained" onClick={addState}>
+        Add State
+      </Button>
       <div style={{ height: "80vh", border: "1px solid blue" }}>
         <ReactFlow
           nodes={nodes}
@@ -101,10 +222,30 @@ function DialogEditor() {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           nodeTypes={nodeTypes}
+          connectionLineStyle={connectionLineStyle}
+          edgeTypes={edgeTypes}
         >
           <Background />
         </ReactFlow>
       </div>
+      <SimpleTextModal
+        show={openEditEdge}
+        handleClose={() => {
+          setOpenEditEdge(false);
+          setEditEdge("");
+        }}
+        title="Enter a Edge Text"
+        submitFunction={submitEdgeTextFunction}
+      />
+      <SimpleTextModal
+        show={openEditNode}
+        handleClose={() => {
+          setOpenEditNode(false);
+          setEditNode("");
+        }}
+        title="Enter a Edge Text"
+        submitFunction={submitNodeFunction}
+      />
     </Container>
   );
 }

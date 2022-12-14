@@ -13,8 +13,20 @@ const CustomNode = ({
   sourcePosition = Position.Bottom,
 }: NodeProps) => {
   return (
-    <div style={{ border: "1px solid red", padding: "25px" }}>
+    <div
+      style={{
+        border: "2px solid #784be8",
+        padding: "25px",
+        backgroundColor: "#cacaca",
+      }}
+    >
       <Handle
+        style={{
+          width: "30px",
+          height: "15px",
+          borderRadius: "5px",
+          backgroundColor: "#00ff00",
+        }}
         type="target"
         position={targetPosition}
         isConnectable={isConnectable}
@@ -29,6 +41,12 @@ const CustomNode = ({
         </IconButton>
       </Stack>
       <Handle
+        style={{
+          width: "30px",
+          height: "15px",
+          borderRadius: "5px",
+          backgroundColor: "#ff0000",
+        }}
         type="source"
         position={sourcePosition}
         isConnectable={isConnectable}

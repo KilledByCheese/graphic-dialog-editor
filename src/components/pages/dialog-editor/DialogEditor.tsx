@@ -1,4 +1,4 @@
-import { Button, Container } from "@mui/material";
+import { Button, Stack } from "@mui/material";
 import { v4 as uuidv4 } from "uuid";
 import { useCallback, useEffect, useState } from "react";
 import ReactFlow, {
@@ -16,28 +16,11 @@ import CustomNode from "./CustomNode";
 import "reactflow/dist/style.css";
 import CustomEdge from "./CustomEdge";
 import SimpleTextModal from "../../ui-elements/SimpleTextModal";
+import isValidDialog from "../../../util/dialogValidator";
 
-const initialNodes: Node[] = [
-  /*{
-    id: "1",
-    type: "input",
-    data: { label: "Node 1" },
-    position: { x: 250, y: 5 },
-  },
-  { id: "2", data: { label: "Node 2" }, position: { x: 100, y: 100 } },
-  { id: "3", data: { label: "Node 3" }, position: { x: 400, y: 100 } },
-  {
-    id: "4",
-    type: "custom",
-    data: { label: "Node 4" },
-    position: { x: 400, y: 200 },
-  },*/
-];
+const initialNodes: Node[] = [];
 
-const initialEdges: Edge[] = [
-  //{ id: "e1-2", source: "1", target: "2", animated: true },
-  //{ id: "e1-3", source: "1", target: "3" },
-];
+const initialEdges: Edge[] = [];
 
 const nodeTypes = {
   custom: CustomNode,
@@ -59,11 +42,45 @@ function DialogEditor() {
 
   useEffect(() => {
     console.log("edges", edges);
+    transformToJson();
   }, [edges]);
 
   useEffect(() => {
     console.log("nodes", nodes);
+    transformToJson();
   }, [nodes]);
+
+  const [dialogJson, setDialogJson] = useState({});
+  const [valid, setValid] = useState(false);
+  function transformToJson() {
+    let dialog: any = {
+      "@id": "Test-Dialog",
+      "@type": "Dialog",
+      states: [],
+    };
+    nodes.forEach((node) => {
+      let edgesFiltered = edges.filter((edge) => edge.source === node.id);
+      let state: any = {
+        state: node.data.label,
+      };
+      if (edgesFiltered.length >= 1) {
+        state.response = [];
+      }
+      edgesFiltered.forEach((edge) => {
+        let targetNode = reactFlowInstance.getNode(edge.target)!;
+        let response: any = {
+          goto: targetNode.data.label,
+        };
+        if (edge.data.text !== "") {
+          response.recognizes = [edge.data.text];
+        }
+        state.response.push(response);
+      });
+      dialog.states.push(state);
+    });
+    setValid(isValidDialog(dialog));
+    setDialogJson(dialog);
+  }
 
   // const onNodesChange = useCallback(
   //   (changes: NodeChange[]) =>
@@ -117,6 +134,12 @@ function DialogEditor() {
 
   function addState() {
     let newId = uuidv4();
+    let furthestPosY = 100;
+    reactFlowInstance.getNodes().forEach((node) => {
+      if (node.position.y >= furthestPosY) {
+        furthestPosY = node.position.y + 150;
+      }
+    });
     let newState = {
       id: newId,
       type: "custom",
@@ -127,7 +150,7 @@ function DialogEditor() {
           edit: editState,
         },
       },
-      position: { x: 100, y: 100 },
+      position: { x: 100, y: furthestPosY },
     };
     reactFlowInstance.addNodes([newState]);
   }
@@ -142,6 +165,13 @@ function DialogEditor() {
   }
 
   function submitNodeFunction(data: any) {
+    let uniqueLabel = true;
+    nodes.forEach((node) => {
+      if (node.data.label === data.text) {
+        uniqueLabel = false;
+      }
+    });
+    if (!uniqueLabel) return; //Label is not Unique stopping update
     setNodes((nds) =>
       nds.map((node) => {
         if (node.id === editNode) {
@@ -206,24 +236,43 @@ function DialogEditor() {
   const [openEditNode, setOpenEditNode] = useState(false);
 
   return (
-    <Container>
-      <Button variant="contained" onClick={addState}>
-        Add State
-      </Button>
-      <div style={{ height: "80vh", border: "1px solid blue" }}>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          nodeTypes={nodeTypes}
-          connectionLineStyle={connectionLineStyle}
-          edgeTypes={edgeTypes}
+    <div>
+      <Stack direction={"row"} spacing={2}>
+        <Button variant="contained" onClick={addState}>
+          Add State
+        </Button>
+        {/* <Button variant="contained" onClick={transformToJson}>
+          To JSON
+        </Button> */}
+      </Stack>
+      <Stack direction={"row"}>
+        <div style={{ height: "80vh", width: "50%", border: "3px solid blue" }}>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            nodeTypes={nodeTypes}
+            connectionLineStyle={connectionLineStyle}
+            edgeTypes={edgeTypes}
+          >
+            <Background />
+          </ReactFlow>
+        </div>
+        <div
+          style={{
+            height: "80vh",
+            width: "50%",
+            border: "3px solid grey",
+            overflow: "scroll",
+          }}
         >
-          <Background />
-        </ReactFlow>
-      </div>
+          <p>Dialog Valid? = {valid.toString()}</p>
+          <hr />
+          <pre>{JSON.stringify(dialogJson, null, 2)}</pre>
+        </div>
+      </Stack>
       <SimpleTextModal
         show={openEditEdge}
         handleClose={() => {
@@ -242,7 +291,7 @@ function DialogEditor() {
         title="Enter a Edge Text"
         submitFunction={submitNodeFunction}
       />
-    </Container>
+    </div>
   );
 }
 

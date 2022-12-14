@@ -2,7 +2,7 @@ import { FormControl, TextField } from "@mui/material";
 import Button from "@mui/material/Button";
 import DialogActions from "@mui/material/DialogActions";
 import Stack from "@mui/material/Stack";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 
 import BaseModal from "./BaseModal";

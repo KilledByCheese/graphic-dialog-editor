@@ -11,12 +11,8 @@ import ReactFlow, {
   useEdgesState,
   useReactFlow,
   MarkerType,
-  updateEdge,
-  EdgeProps,
-  applyEdgeChanges,
 } from "reactflow";
 import CustomNode from "./CustomNode";
-import _ from "lodash";
 import "reactflow/dist/style.css";
 import CustomEdge from "./CustomEdge";
 import SimpleTextModal from "../../ui-elements/SimpleTextModal";
